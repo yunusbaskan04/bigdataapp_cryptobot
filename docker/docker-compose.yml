@@ -1,0 +1,51 @@
+networks:
+  crypto-net:
+    driver: bridge
+
+services:
+# --- ADIM 3: KAFKA (KRaft Mode - Official Image) ---
+  kafka:
+    image: apache/kafka:3.7.0  # <--- Resmi Apache imajı ve stabil sürüm
+    container_name: broker
+    networks:
+      - crypto-net
+    ports:
+      - "9092:9092"
+    environment:
+      # Resmi Apache imajının KRaft konfigürasyon parametreleri
+      - KAFKA_NODE_ID=1
+      - KAFKA_PROCESS_ROLES=broker,controller
+      - KAFKA_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_CONTROLLER_QUORUM_VOTERS=1@localhost:9093
+      - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
+    volumes:
+      - ../data/kafka_data:/var/lib/kafka/data
+    mem_limit: 1024m
+  # --- ADIM 4: MINIO (Data Lake / S3 Alternatifi) ---
+  minio:
+    image: minio/minio:latest
+    container_name: datalake
+    networks:
+      - crypto-net
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=admin
+      - MINIO_ROOT_PASSWORD=SuperSecretPassword123
+    command: server /data --console-address ":9001"
+    volumes:
+      - ../data/minio_data:/data
+    mem_limit: 512m
+
+  # --- ADIM 5: REDIS (In-Memory Cache) ---
+  redis:
+    image: redis:alpine
+    container_name: cache
+    networks:
+      - crypto-net
+    ports:
+      - "6379:6379"
+    mem_limit: 256m
